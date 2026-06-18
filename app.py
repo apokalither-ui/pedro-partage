@@ -53,9 +53,9 @@ for char in welcome_text:
 
 st.divider()
 
-# --- 🛡️ FONCTION DE COMPRESSION ET CONVERSION EN PDF ---
+# --- 🛡️ FONCTION DE COMPRESSION ET CONVERSION EN PDF CORRIGÉE ---
 def images_vers_pdf_compresser(photo_recto, photo_verso=None):
-    """Prend le recto (et éventuellement le verso), les compresse et génère un PDF ultra-léger"""
+    """Prend le recto (et le verso), les compresse et génère un PDF ultra-léger sans bugger"""
     pdf_buffer = io.BytesIO()
     c = canvas.Canvas(pdf_buffer, pagesize=letter)
     largeur_page, hauteur_page = letter
@@ -74,15 +74,9 @@ def images_vers_pdf_compresser(photo_recto, photo_verso=None):
         if img.width > max_size or img.height > max_size:
             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
         
-        # Compression forte en JPEG dans la mémoire temporaire
-        img_buffer = io.BytesIO()
-        img.save(img_buffer, format="JPEG", quality=50) # Qualité 50% pour un max d'espace gagné
-        img_buffer.seek(0)
-        
-        # Insertion dans le PDF (adaptation à la taille de la page)
-        img_reportlab = Image.open(img_buffer)
-        c.drawImage(img_reportlab, 0, 0, width=largeur_page, height=hauteur_page, preserveAspectRatio=True)
-        c.showPage() # Crée une nouvelle page pour le verso s'il y en a un
+        # On insère directement l'image PIL compressée dans la page avec drawInlineImage
+        c.drawInlineImage(img, 0, 0, width=largeur_page, height=hauteur_page, preserveAspectRatio=True)
+        c.showPage() # Crée une nouvelle page pour l'image suivante
 
     c.save()
     pdf_buffer.seek(0)
@@ -140,7 +134,7 @@ with onglet_poster:
         if titre_sujet and photo_recto:
             with st.spinner("Création du PDF compressé en cours..."):
                 
-                # Transformation magique des photos en un seul fichier PDF compressé
+                # Exécution de la fonction corrigée
                 pdf_ultra_leger = images_vers_pdf_compresser(photo_recto, photo_verso)
                 
                 nouveau_sujet = {
