@@ -1,103 +1,55 @@
 import streamlit as st
+import time
 
-# Configuration de la page
-st.set_page_config(page_title="Pédro-Partage", page_icon="📚", layout="centered")
+# 1. CONFIGURATION DE LA PAGE (Look moderne et large)
+st.set_page_config(
+    page_title="Pedro Partage", 
+    page_icon="📚", 
+    layout="wide"
+)
 
-# --- BARRE LATÉRALE (MENU) ---
-st.sidebar.title("📌 Navigation")
-page = st.sidebar.radio("Aller vers :", ["📖 Espace d'étude", "📸 Partager un sujet (Photo)"])
+# 2. DESIGN EN DÉGRADÉ (Bleu et Rouge)
+st.markdown("""
+    <style>
+    .main-banner {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #911a1a 100%);
+        padding: 30px;
+        border-radius: 15px;
+        color: white;
+        text-align: center;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin-bottom: 30px;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.2);
+    }
+    .main-banner h1 {
+        color: white !important;
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+    }
+    .main-banner p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+    }
+    </style>
+    <div class="main-banner">
+        <h1>📚 Pedro Partage</h1>
+        <p>Le site officiel d'échange de sujets et corrigés</p>
+    </div>
+""", unsafe_allow_html=True)
 
-# Liste complète des matières (adaptée pour tout le secondaire)
-matieres_ci = [
-    "Philosophie", 
-    "Histoire-Géographie", 
-    "Français", 
-    "Anglais", 
-    "Espagnol", 
-    "Allemand", 
-    "EDHC", 
-    "Mathématiques",
-    "SVT",
-    "Physique-Chimie"
-]
+# 3. MESSAGE D'ACCUEIL ANIMÉ (Effet machine à écrire)
+welcome_text = "✨ Bienvenue sur Pedro Partage, le site ! Préparez vos examens ensemble. ✨"
+animated_placeholder = st.empty()
+current_text = ""
 
-# Liste complète des classes de la 6e à la Terminale en Côte d'Ivoire
-classes_ci = [
-    "6ème",
-    "5ème",
-    "4ème",
-    "3ème",
-    "2nde A",
-    "2nde C",
-    "1ère A",
-    "1ère C",
-    "1ère D",
-    "Terminale A1",
-    "Terminale A2",
-    "Terminale C",
-    "Terminale D"
-]
+for char in welcome_text:
+    current_text += char
+    # On affiche le texte au fur et à mesure
+    animated_placeholder.markdown(f"<h3 style='text-align: center; color: #2a5298;'>{current_text}</h3>", unsafe_allow_html=True)
+    time.sleep(0.04) # Vitesse de l'écriture (plus le chiffre est petit, plus c'est rapide)
 
-# --- PAGE 1 : ESPACE D'ÉTUDE ---
-if page == "📖 Espace d'étude":
-    st.title("📚 Pédro-Partage : Le site d'entraide")
-    st.write("Bienvenue ! Ici, on partage nos devoirs pour progresser ensemble les amis.")
-    
-    st.divider() # Crée une ligne de séparation propre
-    
-    # Section Profil de l'utilisateur
-    st.markdown("### 👤 Qui es-tu ?")
-    nom = st.text_input("Entre ton nom ou pseudonyme :")
-    classe = st.selectbox("Ta classe / Niveau :", classes_ci) # Utilisation de la nouvelle liste de classes
-    
-    # Section d'entraide par matière
-    st.markdown("### 📖 Espace d'étude")
-    matiere = st.selectbox("Choisis la matière que tu veux réviser :", matieres_ci)
-    
-    # Zone interactive (Bouton)
-    if st.button("Afficher les ressources disponibles"):
-        if nom:
-            st.success(f"Bon courage {nom} ! Voici les sujets disponibles pour la classe de {classe} en {matiere} :")
-            
-            # Exemples de contenu selon la matière sélectionnée
-            if matiere == "Philosophie" and "Terminale" in classe:
-                st.info("📝 Sujet de dissertation récent : La liberté est-elle une illusion ?")
-            elif matiere == "Histoire-Géographie":
-                st.info("🌍 Fiche de révision : Le développement économique de la Côte d'Ivoire.")
-            elif matiere == "EDHC":
-                st.info("🛡️ Cours : Les valeurs civiques et les droits de l'homme en Côte d'Ivoire.")
-            elif matiere == "Mathématiques" and "3ème" in classe:
-                st.info("📐 Exercice Brevet : Calcul littéral et propriétés de Thalès.")
-            else:
-                st.warning(f"Aucun devoir n'a encore été partagé pour le niveau {classe} en {matiere}. Sois le premier !")
-        else:
-            st.error("S'il te plaît, entre ton nom ci-dessus avant de valider.")
+# Un petit trait de séparation élégant
+st.divider()
 
-# --- PAGE 2 : APPAREIL PHOTO ---
-elif page == "📸 Partager un sujet (Photo)":
-    st.title("📸 Partager un sujet d'examen")
-    st.write("Prends une photo nette de ta feuille de papier (sujet, exercice, résumé) pour l'envoyer à tes camarades.")
-    
-    st.divider()
-    
-    # Sélection des détails du sujet
-    st.markdown("### 📝 Infos sur le document")
-    classe_photo = st.selectbox("Pour quelle classe est ce sujet ?", classes_ci) # Ajout de la classe pour la photo
-    matiere_photo = st.selectbox("De quelle matière s'agit-il ?", matieres_ci)
-    commentaire = st.text_input("Ajoute un petit titre ou commentaire (ex: Devoir de Math Lycée San-Pedro) :")
-    
-    # Zone de l'appareil photo
-    st.markdown("### 📷 Active ton appareil photo")
-    image_cliquee = st.camera_input("Place ta feuille bien en face de l'objectif")
-    
-    # Si l'utilisateur a pris une photo
-    if image_cliquee is not None:
-        st.success("📷 Photo capturée avec succès !")
-        
-        # Aperçu de l'image
-        st.image(image_cliquee, caption="Aperçu de ton document avant envoi", use_container_width=True)
-        
-        # Bouton d'envoi final
-        if st.button("🚀 Publier le sujet sur le site"):
-            st.balloons() # Animation festive !
-            st.success(f"Parfait ! Le sujet de {matiere_photo} ({classe_photo}) a été partagé avec succès. Merci pour l'entraide !")
+# --- LA SUITE DE TON CODE ACTUEL COMMENCE ICI ---
+st.write("Tu peux coller la suite de ton application juste en dessous...")
