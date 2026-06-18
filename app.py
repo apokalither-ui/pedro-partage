@@ -41,21 +41,25 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 3. MESSAGE D'ACCUEIL ANIMÉ
-welcome_text = "✨ Bienvenue sur Pedro Partage, le site ! Préparez vos examens ensemble. ✨"
-animated_placeholder = st.empty()
-current_text = ""
+# 3. MESSAGE D'ACCUEIL ANIMÉ (Corrigé : Ne se joue qu'une seule fois !)
+if "animation_jouee" not in st.session_state:
+    welcome_text = "✨ Bienvenue sur Pedro Partage, le site ! Préparez vos examens ensemble. ✨"
+    animated_placeholder = st.empty()
+    current_text = ""
 
-for char in welcome_text:
-    current_text += char
-    animated_placeholder.markdown(f"<h3 style='text-align: center; color: #2a5298;'>{current_text}</h3>", unsafe_allow_html=True)
-    time.sleep(0.04)
+    for char in welcome_text:
+        current_text += char
+        animated_placeholder.markdown(f"<h3 style='text-align: center; color: #2a5298;'>{current_text}</h3>", unsafe_allow_html=True)
+        time.sleep(0.03)
+    st.session_state.animation_jouee = True
+else:
+    # Si l'animation a déjà été jouée, on affiche le texte directement sans recharger
+    st.markdown("<h3 style='text-align: center; color: #2a5298;'>✨ Bienvenue sur Pedro Partage, le site ! Préparez vos examens ensemble. ✨</h3>", unsafe_allow_html=True)
 
 st.divider()
 
-# --- 🛡️ FONCTION DE COMPRESSION ET CONVERSION EN PDF CORRIGÉE ---
+# --- 🛡️ FONCTION DE COMPRESSION ET CONVERSION EN PDF DOUBLE SÉCURITÉ ---
 def images_vers_pdf_compresser(photo_recto, photo_verso=None):
-    """Prend le recto (et le verso), les compresse et génère un PDF ultra-léger sans bugger"""
     pdf_buffer = io.BytesIO()
     c = canvas.Canvas(pdf_buffer, pagesize=letter)
     largeur_page, hauteur_page = letter
@@ -69,18 +73,23 @@ def images_vers_pdf_compresser(photo_recto, photo_verso=None):
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
         
-        # Redimensionnement max pour économiser la mémoire (max 1000px)
-        max_size = 1000
-        if img.width > max_size or img.height > max_size:
-            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+        # Compression forte et redimensionnement
+        max_size = 900
+        img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
         
-        # On insère directement l'image PIL compressée dans la page avec drawInlineImage
-        c.drawInlineImage(img, 0, 0, width=largeur_page, height=hauteur_page, preserveAspectRatio=True)
-        c.showPage() # Crée une nouvelle page pour l'image suivante
+        # Sauvegarde temporaire propre pour ReportLab
+        temp_img_buffer = io.BytesIO()
+        img.save(temp_img_buffer, format="JPEG", quality=50)
+        temp_img_buffer.seek(0)
+        
+        # Intégration sécurisée
+        img_valide = Image.open(temp_img_buffer)
+        c.drawInlineImage(img_valide, 10, 10, width=largeur_page-20, height=hauteur_page-20, preserveAspectRatio=True)
+        c.showPage()
 
     c.save()
     pdf_buffer.seek(0)
-    return pdf_buffer
+    return pdf_buffer.getvalue() # Sauvegarde stable des données
 
 # 4. CRÉATION DES ONGLETS
 onglet_prendre, onglet_poster, onglet_admin = st.tabs(["📚 Consulter les sujets", "📸 Poster un sujet (Recto/Verso PDF)", "⚙️ Gestion"])
@@ -101,12 +110,12 @@ with onglet_prendre:
                 st.markdown(f"### 📝 {sujet['titre']}")
                 st.caption(f"Matière : *{sujet['matiere']}*")
                 
-                # Propose le téléchargement direct du PDF compressé
                 st.download_button(
                     label="📥 Télécharger le sujet complet (PDF)",
                     data=sujet['pdf'],
                     file_name=f"{sujet['titre']}.pdf",
-                    mime="application/pdf"
+                    mime="application/pdf",
+                    key=f"dl_{sujet['titre']}_{time.time()}" # Clé unique pour éviter les conflits
                 )
                 st.divider()
 
@@ -114,38 +123,39 @@ with onglet_prendre:
 with onglet_poster:
     st.subheader("Partagez un nouveau sujet (Recto et Verso optionnel)")
     
-    titre_sujet = st.text_input("Titre du sujet (ex: Régional Blanc Philo 2026)")
-    
-    liste_matieres = [
-        "Philosophie", "Histoire-Géographie", "Français", "Anglais", "Espagnol", 
-        "Allemand", "Mathématiques", "Sciences de la Vie et de la Terre (SVT)", 
-        "Physique-Chimie", "EDHC", "Arts Plastiques", "Musique", "Éducation Physique et Sportive (EPS)"
-    ]
-    matiere_choisie = st.selectbox("Sélectionnez la matière", liste_matieres)
-    
-    # Zone de téléchargement pour le RECTO et VERSO
-    col1, col2 = st.columns(2)
-    with col1:
-        photo_recto = st.file_uploader("📸 Photo Face RECTO (Obligatoire)", type=["png", "jpg", "jpeg"])
-    with col2:
-        photo_verso = st.file_uploader("📸 Photo Face VERSO (Optionnel)", type=["png", "jpg", "jpeg"])
-    
-    if st.button("🚀 Compresser et Publier en PDF"):
-        if titre_sujet and photo_recto:
-            with st.spinner("Création du PDF compressé en cours..."):
-                
-                # Exécution de la fonction corrigée
-                pdf_ultra_leger = images_vers_pdf_compresser(photo_recto, photo_verso)
-                
-                nouveau_sujet = {
-                    "titre": titre_sujet,
-                    "matiere": matiere_choisie,
-                    "pdf": pdf_ultra_leger
-                }
-                st.session_state.liste_sujets.append(nouveau_sujet)
-                st.success("Parfait ! Ton sujet a été compressé en PDF et publié avec succès !")
-        else:
-            st.error("Veuillez donner un titre et ajouter au moins la photo du Recto.")
+    # Utilisation d'un formulaire pour bloquer le rechargement pendant la saisie
+    with st.form("formulaire_partage", clear_on_submit=True):
+        titre_sujet = st.text_input("Titre du sujet (ex: Régional Blanc Philo 2026)")
+        
+        liste_matieres = [
+            "Philosophie", "Histoire-Géographie", "Français", "Anglais", "Espagnol", 
+            "Allemand", "Mathématiques", "Sciences de la Vie et de la Terre (SVT)", 
+            "Physique-Chimie", "EDHC", "Arts Plastiques", "Musique", "Éducation Physique et Sportive (EPS)"
+        ]
+        matiere_choisie = st.selectbox("Sélectionnez la matière", liste_matieres)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            photo_recto = st.file_uploader("📸 Photo Face RECTO (Obligatoire)", type=["png", "jpg", "jpeg"])
+        with col2:
+            photo_verso = st.file_uploader("📸 Photo Face VERSO (Optionnel)", type=["png", "jpg", "jpeg"])
+        
+        bouton_publier = st.form_submit_button("🚀 Compresser et Publier en PDF")
+        
+        if bouton_publier:
+            if titre_sujet and photo_recto:
+                with st.spinner("Création du PDF compressé..."):
+                    pdf_ultra_leger = images_vers_pdf_compresser(photo_recto, photo_verso)
+                    
+                    nouveau_sujet = {
+                        "titre": titre_sujet,
+                        "matiere": matiere_choisie,
+                        "pdf": pdf_ultra_leger
+                    }
+                    st.session_state.liste_sujets.append(nouveau_sujet)
+                    st.success("Parfait ! Ton sujet a été compressé en PDF et publié avec succès ! Va dans l'onglet 'Consulter les sujets'.")
+            else:
+                st.error("Veuillez donner un titre et ajouter au moins la photo du Recto.")
 
 # --- PARTIE 3 : OUTIL D'ADMINISTRATION ---
 with onglet_admin:
@@ -153,9 +163,8 @@ with onglet_admin:
     nb_sujets = len(st.session_state.liste_sujets)
     st.metric(label="Nombre de PDF stockés en mémoire", value=nb_sujets)
     
-    st.write("Si le site ralentit à cause du flux, tu peux nettoyer la mémoire ici :")
     if st.button("🚨 Nettoyer et vider la mémoire du site"):
         st.session_state.liste_sujets = []
-        st.success("Mémoire vidée ! Le site est de nouveau super rapide.")
-        time.sleep(1)
+        st.success("Mémoire vidée !")
+        time.sleep(0.5)
         st.rerun()
